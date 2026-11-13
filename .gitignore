@@ -2,3 +2,5 @@
 models/
 *.zip
 models/
+__pycache__/
+*.pth
