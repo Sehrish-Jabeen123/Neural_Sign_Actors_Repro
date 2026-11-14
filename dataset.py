@@ -1,60 +1,49 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
+import pandas as pd
 import os
-import numpy as np
 
 class How2SignDataset(Dataset):
-    def __init__(self, data_dir, max_frames=50):
+    def __init__(self, csv_file, max_frames=50):
         """
-        Yeh asal How2Sign dataset ko load karne ki class hai.
-        data_dir: Wahan folder jahan text aur SMPL-X (.npz) files rakhi hongi.
+        Asal How2Sign Text Data ko load karne ki class.
         """
-        self.data_dir = data_dir
         self.max_frames = max_frames
+        print("Asal Dataset load ho raha hai...")
         
-        # Asal mein yahan hum 'how2sign_realigned_train.csv' waghera load karte hain.
-        # Abhi ke liye hum farz kar rahe hain ke hamare paas 2 samples hain.
-        self.samples = [
-            {"text": "You want to just kinda take it easy.", "pose_file": "sample_1.npz"},
-            {"text": "Sign language is amazing.", "pose_file": "sample_2.npz"}
-        ]
+        # CSV file ko padhein (jo humne abhi load ki hai)
+        self.df = pd.read_csv(csv_file, sep='\t', on_bad_lines='skip')
+        if len(self.df.columns) == 1:
+            self.df = pd.read_csv(csv_file, sep=',', on_bad_lines='skip')
+            
+        # Text wala column dhoondein
+        self.text_col = 'SENTENCE' if 'SENTENCE' in self.df.columns else self.df.columns[-1]
+        print(f"Total {len(self.df)} sentences load ho gaye!")
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.df)
 
     def __getitem__(self, idx):
-        sample = self.samples[idx]
-        text = sample["text"]
-        pose_path = os.path.join(self.data_dir, sample["pose_file"])
+        # Asal text uthayein
+        text = self.df.iloc[idx][self.text_col]
+        
+        # Abhi ke liye 3D poses dummy (zeros) hain, kyunki 21GB file download ho rahi hai
+        # Jab woh file aa jayegi, hum yahan asal 3D pose load karenge
+        poses = torch.zeros(self.max_frames, 165 * 3)
 
-        # Asal 3D pose load karna (SMPL-X parameters)
-        if os.path.exists(pose_path):
-            data = np.load(pose_path)
-            # Pose parameters (jaise 165 joints * 3D)
-            poses = torch.tensor(data['poses'], dtype=torch.float32)
-            
-            # Frames ko fix length (50) par laana
-            if poses.shape[0] > self.max_frames:
-                poses = poses[:self.max_frames, :]
-            elif poses.shape[0] < self.max_frames:
-                pad_size = self.max_frames - poses.shape[0]
-                padding = torch.zeros(pad_size, poses.shape[1])
-                poses = torch.cat([poses, padding], dim=0)
-        else:
-            # Agar real file nahi mili, toh test ke liye zeros
-            poses = torch.zeros(self.max_frames, 165 * 3)
-
-        return text, poses
+        return str(text), poses
 
 if __name__ == "__main__":
-    print("How2Sign Dataset DataLoader test ho raha hai...")
+    print("DataLoader ko Real Text ke sath test kiya ja raha hai...")
     
-    # Dataset aur DataLoader initialize karein
-    dataset = How2SignDataset(data_dir=".")
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
+    # Dataset load karein
+    dataset = How2SignDataset(csv_file="how2sign_train.csv")
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
     
-    # DataLoader se batch nikalein
+    # Test batch nikalein
     for texts, poses in dataloader:
-        print("Text Batch:", texts)
+        print("\nDataLoader se nikla hua Real Text Batch:")
+        for t in texts:
+            print(f"- {t}")
         print("Poses Shape:", poses.shape)
-        print("DataLoader successfully tayyar hai! (Real pipeline ready)")
+        break # Sirf pehla batch dekhne ke liye
