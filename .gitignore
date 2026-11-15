@@ -4,3 +4,5 @@ models/
 models/
 __pycache__/
 *.pth
+openpose_output/
+openpose_output/
