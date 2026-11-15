@@ -53,6 +53,11 @@ class How2SignDataset(Dataset):
             length = min(len(combined), 495)
             tensor_pose[:length] = torch.tensor(combined[:length], dtype=torch.float32)
             
+            # ==========================================
+            # YEH NAYI LINE ADD KI GAYI HAI (Normalization)
+            # ==========================================
+            tensor_pose = tensor_pose / 1920.0 
+            
             return tensor_pose
         except Exception as e:
             return torch.zeros(495)
