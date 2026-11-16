@@ -6,3 +6,5 @@ __pycache__/
 *.pth
 openpose_output/
 openpose_output/
+full_3d_dataset/
+full_3d_dataset/
